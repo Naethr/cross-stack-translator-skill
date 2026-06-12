@@ -82,8 +82,10 @@ cross-stack-translator/
 Run:
 
 ```bash
-python scripts/validate_skill.py
+python3 scripts/validate_skill.py
 ```
+
+On systems where `python` points to Python 3, `python scripts/validate_skill.py` may also work.
 
 Validation only checks the repository structure and basic skill files. It does not prove that the skill is correct, complete, safe, or suitable for any particular codebase.
 
