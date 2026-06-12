@@ -7,6 +7,8 @@ description: Use when a developer needs to understand an unfamiliar repository b
 
 Use this skill to help a developer understand an unfamiliar repository through a stack they already know. The output is a repository-grounded translation, not a generic framework tutorial.
 
+This skill requires no runtime dependencies.
+
 ## Operating Rules
 
 - Ask for the user's known stack if it is not stated.

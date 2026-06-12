@@ -11,6 +11,7 @@ SKILL_DIR = ROOT / ".agents" / "skills" / "cross-stack-translator"
 REQUIRED_FILES = [
     ROOT / "AGENTS.md",
     ROOT / "README.md",
+    ROOT / "LICENSE",
     ROOT / ".gitignore",
     ROOT / "scripts" / "validate_skill.py",
     SKILL_DIR / "SKILL.md",
@@ -23,10 +24,16 @@ REQUIRED_FILES = [
 
 FORBIDDEN_PATHS = [
     ROOT / "package.json",
+    ROOT / "package-lock.json",
+    ROOT / "pnpm-lock.yaml",
+    ROOT / "yarn.lock",
     ROOT / "pyproject.toml",
     ROOT / "requirements.txt",
     ROOT / "setup.py",
+    ROOT / "setup.cfg",
+    ROOT / "tox.ini",
     ROOT / "Dockerfile",
+    ROOT / "docker-compose.yml",
     ROOT / ".github" / "workflows",
     ROOT / "src",
     ROOT / "app",
@@ -75,6 +82,22 @@ def validate_forbidden_paths(errors):
             errors.append(fail(f"Forbidden path exists: {path.relative_to(ROOT)}"))
 
 
+def validate_license(errors):
+    path = ROOT / "LICENSE"
+    if not path.is_file():
+        return
+
+    text = read_text(path)
+    required_phrases = [
+        "MIT License",
+        "Permission is hereby granted, free of charge",
+        'THE SOFTWARE IS PROVIDED "AS IS"',
+    ]
+    for phrase in required_phrases:
+        if phrase not in text:
+            errors.append(fail(f"LICENSE is missing MIT license phrase: {phrase}"))
+
+
 def validate_skill_front_matter(errors):
     path = SKILL_DIR / "SKILL.md"
     if not path.is_file():
@@ -91,23 +114,40 @@ def validate_skill_front_matter(errors):
         return
 
     front_matter = text[4:end]
-    if "name: cross-stack-translator" not in front_matter:
+    name = None
+    description = None
+    for line in front_matter.splitlines():
+        if line.startswith("name:"):
+            name = line.removeprefix("name:").strip()
+        elif line.startswith("description:"):
+            description = line.removeprefix("description:").strip()
+
+    if name != "cross-stack-translator":
         errors.append(fail("SKILL.md front matter must include name: cross-stack-translator."))
 
-    description_line = None
-    for line in front_matter.splitlines():
-        if line.startswith("description:"):
-            description_line = line
-            break
+    if name and (name.lower() != name or "_" in name or " " in name):
+        errors.append(fail("SKILL.md name must be lowercase and hyphenated."))
 
-    if description_line is None:
+    if description is None:
         errors.append(fail("SKILL.md front matter must include description."))
         return
 
-    description = description_line.lower()
-    if "unfamiliar repository" not in description:
-        errors.append(fail("SKILL.md description must mention an unfamiliar repository."))
-    if "known stack" not in description and "stack they already know" not in description:
+    if not description:
+        errors.append(fail("SKILL.md description must be non-empty."))
+        return
+
+    normalized_description = description.lower()
+    mentions_unfamiliar_target = (
+        "unfamiliar repository" in normalized_description
+        or "unfamiliar codebase" in normalized_description
+    )
+    mentions_known_stack = (
+        "known stack" in normalized_description
+        or "stack they already know" in normalized_description
+    )
+    if not mentions_unfamiliar_target:
+        errors.append(fail("SKILL.md description must mention an unfamiliar repository or codebase."))
+    if not mentions_known_stack:
         errors.append(fail("SKILL.md description must mention a known stack."))
 
 
@@ -137,6 +177,7 @@ def main():
     errors = []
     validate_required_files(errors)
     validate_forbidden_paths(errors)
+    validate_license(errors)
     validate_skill_front_matter(errors)
     validate_output_template(errors)
     validate_stack_mappings(errors)
